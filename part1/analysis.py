@@ -2,14 +2,14 @@ from pathlib import Path
 import re
 import pandas as pd
 
-
+# File paths
 BASE_DIR = Path(__file__).parent
 LOG_FILE = BASE_DIR / "input" / "4_auth.log"
 OUTPUT_DIR = BASE_DIR / "output"
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-
+# Parse authentication log
 def parse_log():
     events = []
 
@@ -28,6 +28,20 @@ def parse_log():
     invalid_user_pattern = re.compile(
         r"^(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}).*"
         r"Invalid user (?P<username>\S+) from "
+        r"(?P<ip>\d+\.\d+\.\d+\.\d+)"
+    )
+
+    max_attempts_pattern = re.compile(
+        r"^(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}).*"
+        r"maximum authentication attempts exceeded for "
+        r"(?P<username>\S+) from "
+        r"(?P<ip>\d+\.\d+\.\d+\.\d+)"
+    )
+
+    connection_closed_pattern = re.compile(
+        r"^(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}).*"
+        r"Connection closed by authenticating user "
+        r"(?P<username>\S+) "
         r"(?P<ip>\d+\.\d+\.\d+\.\d+)"
     )
 
@@ -66,21 +80,52 @@ def parse_log():
                     "source_ip": match.group("ip"),
                     "raw_line": line
                 })
+                continue
+
+            match = max_attempts_pattern.search(line)
+            if match:
+                events.append({
+                    "timestamp": match.group("timestamp"),
+                    "event_type": "maximum_auth_attempts",
+                    "username": match.group("username"),
+                    "source_ip": match.group("ip"),
+                    "raw_line": line
+                })
+                continue
+
+            match = connection_closed_pattern.search(line)
+            if match:
+                events.append({
+                    "timestamp": match.group("timestamp"),
+                    "event_type": "connection_closed_preauth",
+                    "username": match.group("username"),
+                    "source_ip": match.group("ip"),
+                    "raw_line": line
+                })
 
     return pd.DataFrame(events)
 
 
+# Main analysis
 def main():
     df = parse_log()
+
+    if df.empty:
+        print("No matching authentication events were found.")
+        return
 
     print(df.head())
     print()
     print("Parsed events:", len(df))
     print(df["event_type"].value_counts())
 
-    df.to_csv(OUTPUT_DIR / "parsed_events.csv", index=False)
+    # Save all parsed events
+    df.to_csv(
+        OUTPUT_DIR / "parsed_events.csv",
+        index=False
+    )
 
-    # Generate summary tables
+    # Basic summary tables
     failed_df = df[df["event_type"] == "failed_password"]
 
     top_source_ips = (
@@ -120,10 +165,125 @@ def main():
     )
 
     print("\nTop Source IPs:")
-    print(top_source_ips.head())
+    print(top_source_ips.head(10))
 
     print("\nTop Targeted Usernames:")
-    print(top_usernames.head())
+    print(top_usernames.head(10))
+
+    # -----------------------------------------------------
+    # IP behavioural summary
+    # -----------------------------------------------------
+
+    # These event types represent attempts to target accounts.
+    targeting_events = df[
+        df["event_type"].isin([
+            "failed_password",
+            "invalid_user",
+            "maximum_auth_attempts"
+        ])
+    ]
+
+    # Count the number of unique usernames targeted by each IP.
+    unique_users_by_ip = (
+        targeting_events
+        .groupby("source_ip")["username"]
+        .nunique()
+        .rename("unique_users_targeted")
+    )
+
+    # Combine the authentication behaviour of each source IP.
+    ip_summary = (
+        df.groupby("source_ip")
+        .agg(
+            failed_attempts=(
+                "event_type",
+                lambda values: (values == "failed_password").sum()
+            ),
+            accepted_logins=(
+                "event_type",
+                lambda values: (values == "accepted_password").sum()
+            ),
+            invalid_user_events=(
+                "event_type",
+                lambda values: (values == "invalid_user").sum()
+            ),
+            max_auth_attempts=(
+                "event_type",
+                lambda values: (
+                    values == "maximum_auth_attempts"
+                ).sum()
+            ),
+            connection_closed_preauth=(
+                "event_type",
+                lambda values: (
+                    values == "connection_closed_preauth"
+                ).sum()
+            )
+        )
+        .join(unique_users_by_ip)
+        .fillna({"unique_users_targeted": 0})
+        .reset_index()
+    )
+
+    ip_summary["unique_users_targeted"] = (
+        ip_summary["unique_users_targeted"].astype(int)
+    )
+
+    ip_summary = ip_summary.sort_values(
+        by=[
+            "failed_attempts",
+            "max_auth_attempts",
+            "invalid_user_events"
+        ],
+        ascending=False
+    )
+
+    ip_summary.to_csv(
+        OUTPUT_DIR / "ip_summary.csv",
+        index=False
+    )
+
+    print("\nIP Summary:")
+    print(ip_summary.head(10))
+
+    # -----------------------------------------------------
+    # Failure-success correlation
+    # -----------------------------------------------------
+
+    # These IPs produced both failed and accepted authentication events. 
+    # This does not prove compromise, but the activity should be investigated further.
+    failure_success_ips = ip_summary[
+        (ip_summary["failed_attempts"] > 0)
+        & (ip_summary["accepted_logins"] > 0)
+    ].copy()
+
+    failure_success_ips = failure_success_ips.sort_values(
+        by=["failed_attempts", "accepted_logins"],
+        ascending=[False, False]
+    )
+
+    failure_success_ips.to_csv(
+        OUTPUT_DIR / "failure_success_ips.csv",
+        index=False
+    )
+
+    print("\nIPs with both failed and accepted logins:")
+    print(
+        failure_success_ips[
+            [
+                "source_ip",
+                "failed_attempts",
+                "accepted_logins",
+                "invalid_user_events",
+                "max_auth_attempts",
+                "unique_users_targeted"
+            ]
+        ].head(20)
+    )
+
+    print("\nAnalysis completed successfully.")
+    print(f"Outputs saved to: {OUTPUT_DIR}")
+
 
 if __name__ == "__main__":
     main()
