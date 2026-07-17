@@ -17,7 +17,7 @@ def parse_log():
 
     failed_pattern = re.compile(
         r"^(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}).*"
-        r"Failed password for (?P<username>\S+) from "
+        r"Failed password for (?:invalid user )?(?P<username>\S+) from "
         r"(?P<ip>\d+\.\d+\.\d+\.\d+)"
     )
 
