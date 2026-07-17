@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 # File paths
 BASE_DIR = Path(__file__).parent
@@ -280,6 +282,91 @@ def main():
             ]
         ].head(20)
     )
+
+    # -----------------------------------------------------
+    # Visualisation 1: Top source IPs by failed attempts
+    # -----------------------------------------------------
+
+    top_ips_plot = (
+        top_source_ips
+        .head(10)
+        .sort_values("failed_attempts")
+    )
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    bars = ax.barh(
+        top_ips_plot["source_ip"],
+        top_ips_plot["failed_attempts"]
+    )
+
+    ax.bar_label(bars, padding=3)
+
+    ax.set_title(
+        "Top Source IPs by Failed Authentication Attempts"
+    )
+    ax.set_xlabel("Number of failed authentication attempts")
+    ax.set_ylabel("Source IP address")
+    ax.grid(axis="x", alpha=0.25)
+
+    fig.tight_layout()
+    fig.savefig(
+        OUTPUT_DIR / "top_source_ips.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+    plt.close(fig)
+
+    # -----------------------------------------------------
+    # Visualisation 2: Failed attempts over time
+    # -----------------------------------------------------
+
+    failed_over_time = failed_df.copy()
+
+    # The source timestamps do not include a year.
+    # Datetime conversion is used only to order and group events.
+    failed_over_time["datetime"] = pd.to_datetime(
+        failed_over_time["timestamp"],
+        format="%b %d %H:%M:%S",
+        errors="coerce"
+    )
+
+    hourly_failures = (
+        failed_over_time
+        .dropna(subset=["datetime"])
+        .set_index("datetime")
+        .resample("h")
+        .size()
+    )
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+
+    ax.plot(
+        hourly_failures.index,
+        hourly_failures.values,
+        marker="o",
+        linewidth=1.5,
+        markersize=3
+    )
+
+    ax.set_title("Failed Authentication Attempts Over Time")
+    ax.set_xlabel("Time — hourly intervals")
+    ax.set_ylabel("Failed authentication attempts")
+    ax.xaxis.set_major_formatter(
+        mdates.DateFormatter("%b %d\n%H:%M")
+    )
+    ax.grid(axis="y", alpha=0.25)
+
+    fig.autofmt_xdate(rotation=0)
+    fig.tight_layout()
+    fig.savefig(
+        OUTPUT_DIR / "failed_attempts_over_time.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+    plt.close(fig)
+
+    print("\nVisualisations saved successfully.")
 
     print("\nAnalysis completed successfully.")
     print(f"Outputs saved to: {OUTPUT_DIR}")

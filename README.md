@@ -51,24 +51,43 @@ git clone <repository-url>
 ```bash
 pip install -r requirements.txt
 ```
+3. Packages
+```
+pandas
+matplotlib
+```
 
-3. Place the assigned authentication log inside
+4. Place the assigned authentication log inside
 
 ```
 part1/input/
 ```
 
-4. Run
-
+5. Run
 ```bash
 python part1/analysis.py
 ```
 
+
+
+
+
+```
+Generated outputs:
+part1/output/parsed_events.csv
+part1/output/summary_counts.csv
+part1/output/top_source_ips.csv
+part1/output/top_targeted_usernames.csv
+part1/output/ip_summary.csv
+part1/output/failure_success_ips.csv
+part1/output/top_source_ips.png
+part1/output/failed_attempts_over_time.png
+
 Generated outputs will be saved inside
 
 ```
-part1/output/
-```
+
+
 
 ---
 

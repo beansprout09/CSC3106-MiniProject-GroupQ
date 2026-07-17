@@ -22,5 +22,3 @@ env/
 # Generated Python cache
 *.pyo
 
-# Logs
-*.log
