@@ -1,6 +1,10 @@
 from pathlib import Path
 import sys
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import pandas as pd
 
 # ---------------------------------------------------------------------------
@@ -26,6 +30,10 @@ from analysis import parse_log  # noqa: E402  (Part 1 module, see path setup abo
 MAX_RETRY = 5                    # failed attempts that trigger a block
 FIND_TIME = pd.Timedelta(minutes=10)   # rolling window in which they must occur
 BAN_TIME = pd.Timedelta(minutes=60)    # how long the source IP is blocked for
+
+# Source IP selected in Part 1 as the highest-priority finding this
+# response addresses (951 failed attempts, then one accepted login).
+FOCUS_IP = "203.0.113.89"
 
 
 def fmt(ts):
@@ -139,6 +147,66 @@ def detect_and_respond(df: pd.DataFrame):
     return alerts_df, blocked_df, summary_df
 
 
+def plot_focus_ip_timeline(df: pd.DataFrame, alerts_df: pd.DataFrame, focus_ip: str):
+    """
+    Plot failed-password attempts, the block windows this control would
+    have triggered, and any accepted login, for one source IP - the Part 1
+    finding this Part 2 response addresses. Saved as the figure used to
+    support the Part 2 evaluation.
+    """
+    ip_events = df[df["source_ip"] == focus_ip].sort_values("datetime")
+    ip_alerts = alerts_df[alerts_df["source_ip"] == focus_ip]
+    if ip_events.empty or ip_alerts.empty:
+        return
+
+    failed = ip_events[ip_events["event_type"] == "failed_password"]
+    accepted = ip_events[ip_events["event_type"] == "accepted_password"]
+
+    windows = [
+        (
+            pd.to_datetime(row["trigger_timestamp"], format="%b %d %H:%M:%S"),
+            pd.to_datetime(row["block_until"], format="%b %d %H:%M:%S"),
+        )
+        for _, row in ip_alerts.iterrows()
+    ]
+
+    fig, ax = plt.subplots(figsize=(10, 3.5))
+
+    for i, (start, end) in enumerate(windows):
+        ax.axvspan(start, end, color="red", alpha=0.15,
+                   label="Blocked window" if i == 0 else None)
+        ax.plot(start, 0, marker="v", color="red", markersize=8,
+                label="Block triggered (5 fails / 10 min)" if i == 0 else None)
+
+    ax.plot(failed["datetime"], [0] * len(failed), "|", color="steelblue",
+            markersize=14, label="Failed password attempt")
+
+    for _, row in accepted.iterrows():
+        ts = row["datetime"]
+        inside_block = any(start <= ts <= end for start, end in windows)
+        ax.plot(ts, 0, marker="*", color="black", markersize=16,
+                label=f"Accepted login ({row['username']})")
+        note = f"{ts.strftime('%H:%M:%S')}"
+        note += " — inside block window" if inside_block else " — outside any block window"
+        ax.annotate(note, xy=(ts, 0), xytext=(0, -30), textcoords="offset points",
+                    ha="center", va="top", fontsize=8)
+
+    day_label = ip_events["datetime"].dt.strftime("%d %B").mode().iloc[0]
+    ax.set_title(f"Failed attempts, block windows and accepted login for {focus_ip}")
+    ax.set_xlabel(f"Time ({day_label})")
+    ax.set_yticks([])
+    ax.set_ylim(-1, 1)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), loc="upper left", fontsize=8)
+
+    fig.tight_layout()
+    fig.savefig(OUTPUT_DIR / "focus_ip_timeline.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     df = load_events()
     alerts_df, blocked_df, summary_df = detect_and_respond(df)
@@ -146,15 +214,16 @@ def main():
     alerts_df.to_csv(OUTPUT_DIR / "alerts.csv", index=False)
     blocked_df.to_csv(OUTPUT_DIR / "blocked_events.csv", index=False)
     summary_df.to_csv(OUTPUT_DIR / "detection_summary.csv", index=False)
+    plot_focus_ip_timeline(df, alerts_df, FOCUS_IP)
 
     print(f"Total alerts (threshold crossings) generated: {len(alerts_df)}")
     print(f"Total events that would have been blocked: {len(blocked_df)}")
     print()
 
     # Highlight the specific finding this response targets.
-    focus = summary_df[summary_df["source_ip"] == "203.0.113.89"]
+    focus = summary_df[summary_df["source_ip"] == FOCUS_IP]
     if not focus.empty:
-        print("Focus IP 203.0.113.89 (Part 1 finding):")
+        print(f"Focus IP {FOCUS_IP} (Part 1 finding):")
         print(focus.to_string(index=False))
         print()
 

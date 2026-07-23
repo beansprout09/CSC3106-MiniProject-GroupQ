@@ -44,6 +44,11 @@ imports `parse_log` from Part 1 rather than re-implementing parsing).
   attempts, whether it ever crossed the threshold, how many attempts it took
   to first trigger a block, and whether any accepted login would have been
   blocked by this control.
+- `focus_ip_timeline.png` — timeline chart for the Part 1 focus IP
+  (`FOCUS_IP` in the script) showing failed-password attempts, the block
+  windows this control would have triggered, and where its accepted login
+  falls relative to them. This is the figure used in the Part 2 report
+  section.
 
 ## Key result
 
