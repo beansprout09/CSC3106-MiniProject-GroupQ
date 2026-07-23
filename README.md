@@ -25,7 +25,6 @@ CSC3106-MiniProject-GroupQ/
 ├── part2/                  # Technical defensive response
 │   ├── README.md
 │   ├── detect_and_respond.py
-│   ├── implementation/
 │   └── output/
 │
 ├── requirements.txt
@@ -92,9 +91,8 @@ See **`part2/README.md`** for implementation details, execution instructions, pa
 
 ## Requirements
 
-- Python 3.x
-- pandas
-- matplotlib
+- Python 3.10 or later
+- Dependencies listed in `requirements.txt`
 
 ---
 
