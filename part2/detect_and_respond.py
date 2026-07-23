@@ -28,6 +28,14 @@ FIND_TIME = pd.Timedelta(minutes=10)   # rolling window in which they must occur
 BAN_TIME = pd.Timedelta(minutes=60)    # how long the source IP is blocked for
 
 
+def fmt(ts):
+    """Format a computed timestamp for display, dropping the placeholder
+    year pandas assigns when the source log has no year field."""
+    if ts is None or pd.isna(ts):
+        return None
+    return ts.strftime("%b %d %H:%M:%S")
+
+
 def load_events() -> pd.DataFrame:
     """Parse the assigned log using the Part 1 parser and add a datetime column."""
     df = parse_log()
@@ -75,7 +83,7 @@ def detect_and_respond(df: pd.DataFrame):
                     "timestamp": row["timestamp"],
                     "event_type": event_type,
                     "username": row["username"],
-                    "block_active_until": active_block_until,
+                    "block_active_until": fmt(active_block_until),
                 })
                 if event_type == "accepted_password":
                     accepted_blocked = True
@@ -106,7 +114,7 @@ def detect_and_respond(df: pd.DataFrame):
                         "trigger_timestamp": row["timestamp"],
                         "attempts_in_window": len(failed_times),
                         "window_minutes": FIND_TIME.total_seconds() / 60,
-                        "block_until": ts + BAN_TIME,
+                        "block_until": fmt(ts + BAN_TIME),
                     })
                     active_block_until = ts + BAN_TIME
                     failed_times = []  # reset window after a block is imposed
@@ -117,9 +125,9 @@ def detect_and_respond(df: pd.DataFrame):
             "total_accepted_logins": int((group["event_type"] == "accepted_password").sum()),
             "ever_crossed_threshold": ever_blocked,
             "attempts_before_first_alert": first_alert_attempt_count,
-            "first_alert_time": first_alert_time,
+            "first_alert_time": fmt(first_alert_time),
             "accepted_login_would_have_been_blocked": accepted_blocked,
-            "accepted_login_time_if_not_blocked": accepted_unblocked_time,
+            "accepted_login_time_if_not_blocked": fmt(accepted_unblocked_time),
         })
 
     alerts_df = pd.DataFrame(alerts)
