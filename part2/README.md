@@ -1,4 +1,4 @@
-# Part 2 — Technical Defensive Response
+# Part 2: Technical Defensive Response
 
 ## What this addresses
 

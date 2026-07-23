@@ -4,113 +4,110 @@
 
 This repository contains our group submission for the CSC3106 Cyber Security Fundamentals Mini Project.
 
-The project analyses an assigned Linux authentication log (`auth.log`) using Python to identify suspicious authentication activity, produce evidence-based visualisations, assess cyber security risks, and propose an appropriate technical defensive response.
+The project analyses an assigned Linux authentication log using Python to identify suspicious authentication activity, generate reproducible evidence, assess cyber security risks, and evaluate a technical defensive response.
 
 ---
 
-## Project Objectives
+## Repository Structure
 
-### Part 1: Authentication Log Analysis
-
-- Analyse the assigned Linux authentication log
-- Identify suspicious authentication behaviour
-- Generate reproducible evidence using Python
-- Produce visualisations
-- Develop an asset-focused risk matrix
-- Recommend an initial response
-
-### Part 2: Technical Defensive Response
-
-- Select one prioritised risk from Part 1
-- Design an appropriate defensive solution
-- Justify the proposed mitigation
-- Discuss limitations and trade-offs
-
----
-
-## Technologies
-
-- Python 3.x
-- pandas
-- matplotlib
-- Regular Expressions (re)
-- Git & GitHub
-
----
-
-## Running the Analysis (Part1)
-
-1. Clone the repository
-
-```bash
-git clone <repository-url>
+```text
+CSC3106-MiniProject-GroupQ/
+│
+├── report/
+│   └── report.pdf          # Final report
+│
+├── part1/                  # Authentication log analysis
+│   ├── README.md
+│   ├── analysis.py
+│   ├── input/
+│   └── output/
+│
+├── part2/                  # Technical defensive response
+│   ├── README.md
+│   ├── detect_and_respond.py
+│   ├── implementation/
+│   └── output/
+│
+├── requirements.txt
+└── README.md
 ```
 
-2. Install dependencies
+---
+
+## Quick Start
+
+1. Clone the repository.
+
+```bash
+git clone https://github.com/beansprout09/CSC3106-MiniProject-GroupQ.git
+cd CSC3106-MiniProject-GroupQ
+```
+
+2. Install the required dependencies.
 
 ```bash
 pip install -r requirements.txt
 ```
-3. Packages
-```
-pandas
-matplotlib
+
+3. Place the assigned authentication log at:
+
+```text
+part1/input/4_auth.log
 ```
 
-4. Place the assigned authentication log inside
+4. Run the Part 1 analysis.
 
-```
-part1/input/
-```
-
-5. Run
 ```bash
 python part1/analysis.py
 ```
 
-
-
-
-
-```
-Generated outputs:
-part1/output/parsed_events.csv
-part1/output/summary_counts.csv
-part1/output/top_source_ips.csv
-part1/output/top_targeted_usernames.csv
-part1/output/ip_summary.csv
-part1/output/failure_success_ips.csv
-part1/output/top_source_ips.png
-part1/output/failed_attempts_over_time.png
-
-Generated outputs will be saved inside
-
-```
-
-
+For detailed documentation of each component, refer to the README files in `part1/` and `part2/`.
 
 ---
 
-## Part 2
+## Project Overview
 
-Part 2 builds upon one prioritised risk identified in Part 1.
-Depending on the selected defensive response, this directory may contain:
-- Detection logic
-- Configuration files
-- Architecture diagrams
-- Supporting documentation
-- Implementation prototype (if applicable)
+### Part 1: Authentication Log Analysis
+
+- Analyse the assigned Linux authentication log.
+- Extract selected OpenSSH authentication events using Python.
+- Generate reproducible evidence and visualisations.
+- Identify security findings and prioritised risks.
+- Assess risks to the chosen asset.
+
+See **`part1/README.md`** for implementation details, assumptions, inputs, outputs, and limitations.
+
+---
+
+### Part 2: Technical Defensive Response
+
+- Select one prioritised risk from Part 1.
+- Design and implement a technical defensive response.
+- Evaluate the effectiveness of the proposed control.
+- Discuss security benefits, limitations, and trade-offs.
+
+See **`part2/README.md`** for implementation details, execution instructions, parameters, outputs, and limitations.
+
+---
+
+## Requirements
+
+- Python 3.x
+- pandas
+- matplotlib
+
+---
 
 ## Team Members
 
 | Name | Responsibility |
 |------|----------------|
-| Haley & Daniel | Part 1: Authentication Log Analysis |
+| Haley & Daniel | Part 1:  Authentication Log Analysis |
 | Chervelle & Jocasta | Part 2: Technical Defensive Response |
-| All members | Report Writing & Documentation |
+| All members | Report writing and documentation |
 
 ---
 
 ## License
 
-This repository is created solely for educational purposes as part of the CSC3106 Cyber Security Fundamentals module at the University of Glasgow and Singapore Institute of Technology.
+This repository is provided for educational purposes as part of the CSC3106 Cyber Security Fundamentals module at the Singapore Institute of Technology and the University of Glasgow.
